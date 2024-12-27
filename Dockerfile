@@ -16,5 +16,5 @@ COPY . /app/
 # Expone el puerto en el que la app escuchará
 EXPOSE 8000
 
-# Comando para iniciar la aplicación
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Comando para iniciar la aplicación con Gunicorn
+CMD ["gunicorn", "playnativa_project.wsgi:application", "--bind", "0.0.0.0:8000"]

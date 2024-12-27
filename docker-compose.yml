@@ -3,20 +3,11 @@ version: '3.8'
 services:
   playnativa-web:
     build: .
-    command: gunicorn playnativa.wsgi:application --bind 0.0.0.0:8000
+    command: gunicorn playnativa_project.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - .:/app
-    expose:
-      - "8000"  # Exponer el puerto 8000 para la comunicación interna
+    ports:
+      - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-
-  nginx:
-    image: nginx:latest
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf 
-      - ./ssl:/etc/ssl 
-    ports:
-      - "443:443"
-    depends_on:
-      - playnativa-web
+  

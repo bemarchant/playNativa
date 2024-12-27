@@ -1,0 +1,11 @@
+name: playnativa-pulumi
+description: Arquitectura de mi página web playnativa
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python
