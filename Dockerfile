@@ -4,16 +4,19 @@ FROM python:3.9-slim
 # Establece el directorio de trabajo
 WORKDIR /app
 
-# Copia los archivos necesarios
+# Copia los archivos de requerimientos primero para aprovechar la cache de Docker
 COPY requirements.txt /app/
 
 # Instala las dependencias
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia el resto del código
+# Copia el resto del código de la aplicación
 COPY . /app/
 
-# Expone el puerto en el que la app escuchará
+# Ejecuta collectstatic
+RUN python manage.py collectstatic --noinput
+
+# Expon el puerto en el que la app escuchará
 EXPOSE 8000
 
 # Comando para iniciar la aplicación con Gunicorn

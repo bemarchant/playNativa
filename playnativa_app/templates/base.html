@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}playnativa{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'playnativa_app/styles.css' %}">
+    <link rel="icon" href="{% static 'playnativa_app/favicon_vultur.ico' %}" type="image/x-icon" />
+</head>
+<body>
+    <!-- Incluir el header -->
+    {% include "header.html" %}
+    
+    <!-- Contenido específico de cada página -->
+    <main>
+        {% block content %}
+        <!-- El contenido irá aquí -->
+        {% endblock %}
+    </main>
+    
+    <!-- Footer común (opcional) -->
+    <footer>
+        <p>&copy; 2024 playnativa. Todos los derechos reservados.</p>
+    </footer>
+</body>
+</html>
