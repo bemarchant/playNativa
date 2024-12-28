@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 
 # Ejecuta collectstatic
-RUN python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput --verbosity 2
 
 # Expon el puerto en el que la app escuchará
 EXPOSE 8000
