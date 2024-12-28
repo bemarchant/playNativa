@@ -1,1 +1,7 @@
+.env
 venv
+__pycache__/
+*.pyc
+playnativa_app/**/__pycache__/
+playnativa_project/**/__pycache__/
+
