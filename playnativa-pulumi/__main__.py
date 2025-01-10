@@ -167,8 +167,7 @@ task_definition = aws.ecs.TaskDefinition(
     memory="1024",
     network_mode="awsvpc",
     execution_role_arn=execution_role.arn,
-    task_role_arn=task_role.arn,  # Asigna el rol aquí
-    
+    task_role_arn=task_role.arn,
     container_definitions=image.image_name.apply(
         lambda image: f"""[
             {{
@@ -178,11 +177,22 @@ task_definition = aws.ecs.TaskDefinition(
                 "portMappings": [{{
                     "containerPort": 8000,
                     "protocol": "tcp"
-                }}]
+                }}],
+                "environment": [
+                    {{
+                        "name": "PYTHONUNBUFFERED",
+                        "value": "1"
+                    }},
+                    {{
+                        "name": "DJANGO_ENV",
+                        "value": "prod"
+                    }}
+                ]
             }}
         ]"""
     ),
 )
+
 
 # Servicio ECS
 ecs_service = aws.ecs.Service(
