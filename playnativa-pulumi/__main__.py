@@ -3,6 +3,7 @@
 import pulumi
 import pulumi_aws as aws
 import pulumi_docker as docker
+import os
 
 # Parámetros clave
 region = "us-east-1"
@@ -61,11 +62,11 @@ ecr_repo = aws.ecr.Repository("playnativa-ecr")
 image = docker.Image(
     "playnativa-image",
     build={
-        "context": "../",  # Contexto de construcción
-        "dockerfile": "../Dockerfile",  # Ruta específica al Dockerfile
-        "platform": "linux/amd64",  # Asegura compatibilidad con AWS Fargate
+        "context": "../",
+        "dockerfile": "../Dockerfile",
+        "platform": "linux/amd64",
     },
-    image_name=ecr_repo.repository_url.apply(lambda url: f"{url}:latest"),
+    image_name=ecr_repo.repository_url.apply(lambda url: f"{url}:{os.getenv('GITHUB_SHA', 'latest')}"),
     registry=ecr_repo.registry_id.apply(lambda _: aws.ecr.get_authorization_token().proxy_endpoint),
 )
 
@@ -129,6 +130,35 @@ aws.iam.RolePolicyAttachment("ecsTaskExecutionRolePolicy",
     role=execution_role.name,
     policy_arn="arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy")
 
+
+task_role = aws.iam.Role(
+    "ecsTaskRole",
+    assume_role_policy="""{
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "ecs-tasks.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+            }
+        ]
+    }"""
+)
+
+aws.iam.RolePolicyAttachment(
+    "ssmManagedPolicy",
+    role=task_role.name,
+    policy_arn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+)
+
+aws.iam.RolePolicyAttachment(
+    "ecsExecuteCommandPolicy",
+    role=task_role.name,
+    policy_arn="arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
+)
+
 # Definición de la tarea
 task_definition = aws.ecs.TaskDefinition(
     "playnativa-task",
@@ -137,6 +167,8 @@ task_definition = aws.ecs.TaskDefinition(
     memory="1024",
     network_mode="awsvpc",
     execution_role_arn=execution_role.arn,
+    task_role_arn=task_role.arn,  # Asigna el rol aquí
+    
     container_definitions=image.image_name.apply(
         lambda image: f"""[
             {{
@@ -159,6 +191,7 @@ ecs_service = aws.ecs.Service(
     desired_count=1,
     launch_type="FARGATE",
     task_definition=task_definition.arn,
+    enable_execute_command=True,
     network_configuration={
         "assignPublicIp": True,
         "subnets": subnets,

@@ -11,10 +11,10 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia el resto del código de la aplicación
-COPY . /app/
+COPY . .
 
 # Ejecuta collectstatic
-RUN python manage.py collectstatic --noinput --verbosity 2
+RUN python manage.py collectstatic --noinput
 
 # Expon el puerto en el que la app escuchará
 EXPOSE 8000

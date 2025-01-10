@@ -41,8 +41,8 @@ jobs:
     
     - name: Build and Push Docker Image
       run: |
-        docker build -t 307154673918.dkr.ecr.us-east-1.amazonaws.com/playnativa:latest .
-        docker push 307154673918.dkr.ecr.us-east-1.amazonaws.com/playnativa:latest
+        docker build -t 307154673918.dkr.ecr.us-east-1.amazonaws.com/playnativa:${{ github.sha }} .
+        docker push 307154673918.dkr.ecr.us-east-1.amazonaws.com/playnativa:${{ github.sha }}
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
