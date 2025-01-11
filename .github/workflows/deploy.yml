@@ -50,7 +50,7 @@ jobs:
     - name: Run collectstatic
       run: |
         python manage.py collectstatic --noinput
-      working-directory: playnativa-pulumi
+      working-directory: .
       env:
         DJANGO_SETTINGS_MODULE: playnativa_project.settings      
     
