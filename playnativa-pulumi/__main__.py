@@ -28,7 +28,7 @@ security_group = aws.ec2.SecurityGroup(
             "to_port": 443,
             "cidr_blocks": ["0.0.0.0/0"],  # HTTPS from the world
         },
-        # (Optional) If you want to allow HTTP on port 80
+        # HTTP inbound
         {
             "protocol": "tcp",
             "from_port": 80,
@@ -54,11 +54,10 @@ security_group = aws.ec2.SecurityGroup(
     tags={"Name": "playnativa-sg"},
 )
 
-
-
 # Repositorio ECR
 ecr_repo = aws.ecr.Repository("playnativa-ecr")
 
+# Construir imagen de aplicación
 image = docker.Image(
     "playnativa-image",
     build={
@@ -70,9 +69,7 @@ image = docker.Image(
     registry=ecr_repo.registry_id.apply(lambda _: aws.ecr.get_authorization_token().proxy_endpoint),
 )
 
-pulumi.export("Image Name", image.image_name)
-
-# ECS cluster
+# Crear un ECS Cluster
 ecs_cluster = aws.ecs.Cluster(cluster_name)
 
 # Crear un Target Group
@@ -159,12 +156,28 @@ aws.iam.RolePolicyAttachment(
     policy_arn="arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
 )
 
-# Definición de la tarea
+
+# Crear EFS para archivos estáticos
+efs = aws.efs.FileSystem(
+    "playnativa-efs",
+    encrypted=True,
+    tags={"Name": "playnativa-staticfiles"}
+)
+
+# Crear punto de montaje EFS
+efs_mount_target = aws.efs.MountTarget(
+    "playnativa-efs-mount-target",
+    file_system_id=efs.id,
+    subnet_id=subnets[0],
+    security_groups=[security_group.id]
+)
+
+# Configurar definición de tarea ECS
 task_definition = aws.ecs.TaskDefinition(
     "playnativa-task",
     family="playnativa",
-    cpu="512",
-    memory="1024",
+    cpu="1024",
+    memory="2048",
     network_mode="awsvpc",
     execution_role_arn=execution_role.arn,
     task_role_arn=task_role.arn,
@@ -174,27 +187,67 @@ task_definition = aws.ecs.TaskDefinition(
                 "name": "playnativa",
                 "image": "{image}",
                 "essential": true,
-                "portMappings": [{{
-                    "containerPort": 8000,
-                    "protocol": "tcp"
-                }}],
-                "environment": [
+                "portMappings": [
                     {{
-                        "name": "PYTHONUNBUFFERED",
-                        "value": "1"
-                    }},
+                        "containerPort": 8000,
+                        "protocol": "tcp"
+                    }}
+                ],
+                "environment": [
                     {{
                         "name": "DJANGO_ENV",
                         "value": "prod"
+                    }}
+                ],
+                "mountPoints": [
+                    {{
+                        "sourceVolume": "staticfiles",
+                        "containerPath": "/app/staticfiles"
+                    }}
+                ],
+                "command": [
+                    "sh",
+                    "-c",
+                    "mkdir -p /app/staticfiles && python manage.py collectstatic --noinput && gunicorn playnativa_project.wsgi:application --bind 0.0.0.0:8000"
+                ]
+            }},
+            {{
+                "name": "nginx",
+                "image": "nginx:latest",
+                "essential": true,
+                "portMappings": [
+                    {{
+                        "containerPort": 80,
+                        "protocol": "tcp"
+                    }}
+                ],
+                "mountPoints": [
+                    {{
+                        "sourceVolume": "staticfiles",
+                        "containerPath": "/app/staticfiles"
+                    }}
+                ],
+                "command": ["nginx", "-g", "daemon off;"],
+                "environment": [
+                    {{
+                        "name": "STATIC_ROOT",
+                        "value": "/app/staticfiles"
                     }}
                 ]
             }}
         ]"""
     ),
+    volumes=[{
+        "name": "staticfiles",
+        "efsVolumeConfiguration": {
+            "fileSystemId": efs.id,
+            "rootDirectory": "/",
+            "transitEncryption": "ENABLED"
+        }
+    }]
 )
 
-
-# Servicio ECS
+# Crear servicio ECS
 ecs_service = aws.ecs.Service(
     "playnativa-service",
     cluster=ecs_cluster.arn,
@@ -239,3 +292,4 @@ cname_record = aws.route53.Record(
     ttl=300,  # Tiempo de vida (en segundos)
     records=[domain_name],  # Apunta a playnativa.cl
 )
+
