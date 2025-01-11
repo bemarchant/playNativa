@@ -18,7 +18,13 @@ jobs:
 
     - name: Install dependencies
       run: pip install --upgrade pip && pip install -r requirements.txt
-      working-directory: playnativa-pulumi
+      working-directory: .
+
+    - name: Debug Python environment
+      run: |
+        which python
+        python --version
+        pip list
 
     - name: Login to Pulumi
       run: pulumi login
@@ -53,7 +59,7 @@ jobs:
       working-directory: .
       env:
         DJANGO_SETTINGS_MODULE: playnativa_project.settings      
-    
+
     - name: Run pulumi up
       run: pulumi up --yes
       env:
